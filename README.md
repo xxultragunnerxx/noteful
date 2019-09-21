@@ -1,2 +1,1 @@
-# noteful
-Noteful app
+# Noteful Client
