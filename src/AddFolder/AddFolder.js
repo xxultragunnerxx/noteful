@@ -1,61 +1,106 @@
-import React, { Component } from 'react'
-import NotefulForm from '../NotefulForm/NotefulForm'
-import ApiContext from '../ApiContext'
-import config from '../config'
-import './AddFolder.css'
+import React, {Component} from "react";
+import NotefulForm from "../NotefulForm/NotefulForm";
+import "./AddFolder.css";
+import NoteContext from "../NoteContext";
 
 export default class AddFolder extends Component {
-  static defaultProps = {
-    history: {
-      push: () => { }
-    },
+  constructor() {
+    super();
+    this.state = {
+      error: null,
+      name: "",
+      nameValid: false,
+      validationMessage: "",
+    };
   }
-  static contextType = ApiContext;
+  static contextType = NoteContext;
 
-  handleSubmit = e => {
-    e.preventDefault()
-    const folder = {
-      name: e.target['folder-name'].value
+  isNameValid = event => {
+    event.preventDefault();
+    if (!this.state.name) {
+      this.setState({
+        validationMessage: "Folder name can not be blank.",
+        nameValid: false,
+      });
+    } else {
+      this.setState(
+        {
+          validationMessage: "",
+          nameValid: true,
+        },
+        this.handleAddFolder()
+      );
     }
-    fetch(`${config.API_ENDPOINT}/folders`, {
-      method: 'POST',
+  };
+
+  handleAddFolder = () => {
+    const options = {
+      method: "POST",
       headers: {
-        'content-type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(folder),
-    })
+      body: JSON.stringify({
+        // id: cuid(),
+        name: this.state.name,
+      }),
+    };
+    console.log(options);
+
+    fetch("http://localhost:9090/folders", options)
       .then(res => {
-        if (!res.ok)
-          return res.json().then(e => Promise.reject(e))
-        return res.json()
+        if (!res.ok) {
+          throw new Error("Something went wrong");
+        }
+        return res;
       })
-      .then(folder => {
-        this.context.addFolder(folder)
-        this.props.history.push(`/folder/${folder.id}`)
+      .then(res => res.json())
+      .then(data => {
+        this.context.handleAddFolder(data);
       })
-      .catch(error => {
-        console.error({ error })
-      })
-  }
+      .catch(err => {
+        this.setState({
+          error: err.message,
+        });
+      });
+  };
+
+  nameChange = letter => {
+    this.setState({name: letter});
+  };
 
   render() {
     return (
       <section className='AddFolder'>
         <h2>Create a folder</h2>
-        <NotefulForm onSubmit={this.handleSubmit}>
+        <NotefulForm
+          onSubmit={event => {
+            this.isNameValid(event);
+          }}
+        >
           <div className='field'>
-            <label htmlFor='folder-name-input'>
-              Name
-            </label>
-            <input type='text' id='folder-name-input' name='folder-name' />
+            <label htmlFor='folder-name-input'>Name</label>
+            <input
+              type='text'
+              id='folder-name-input'
+              name='folder'
+              onChange={event => this.nameChange(event.target.value)}
+            />
+            {!this.state.nameValid && (
+              <div>
+                <p>{this.state.validationMessage}</p>
+              </div>
+            )}
           </div>
           <div className='buttons'>
-            <button type='submit'>
-              Add folder
-            </button>
+            <button type='submit'>Add folder</button>
           </div>
         </NotefulForm>
+        {this.state.error && (
+          <div>
+            <p>{this.state.error}</p>
+          </div>
+        )}
       </section>
-    )
+    );
   }
 }
